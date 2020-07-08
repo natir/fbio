@@ -54,7 +54,7 @@ pub fn test_if(nuc: u8) -> u8 {
 
 pub fn test_match_upper(mut nuc: u8) -> u8 {
     nuc = nuc.to_ascii_uppercase();
-    
+
     match nuc {
         b'A' => 0,
         b'C' => 1,
@@ -66,7 +66,7 @@ pub fn test_match_upper(mut nuc: u8) -> u8 {
 
 pub fn test_if_upper(mut nuc: u8) -> u8 {
     nuc = nuc.to_ascii_uppercase();
-    
+
     if nuc == b'A' {
         0
     } else if nuc == b'C' {
@@ -100,7 +100,7 @@ pub fn lookup(nuc: u8) -> u8 {
 }
 
 pub fn lookup_nocheck(nuc: u8) -> u8 {
-    unsafe{ *LOOKUP.get_unchecked(nuc as usize) }
+    unsafe { *LOOKUP.get_unchecked(nuc as usize) }
 }
 
 #[cfg(test)]
@@ -108,71 +108,71 @@ mod tests {
 
     #[test]
     fn move_mask() {
-	assert_eq!(0, super::move_mask(b'A'));
-	assert_eq!(1, super::move_mask(b'C'));
-	assert_eq!(2, super::move_mask(b'T'));
-	assert_eq!(3, super::move_mask(b'G'));
-	assert_eq!(0, super::move_mask(b'a'));
-	assert_eq!(1, super::move_mask(b'c'));
-	assert_eq!(2, super::move_mask(b't'));
-	assert_eq!(3, super::move_mask(b'g'));
+        assert_eq!(0, super::move_mask(b'A'));
+        assert_eq!(1, super::move_mask(b'C'));
+        assert_eq!(2, super::move_mask(b'T'));
+        assert_eq!(3, super::move_mask(b'G'));
+        assert_eq!(0, super::move_mask(b'a'));
+        assert_eq!(1, super::move_mask(b'c'));
+        assert_eq!(2, super::move_mask(b't'));
+        assert_eq!(3, super::move_mask(b'g'));
 
-	assert_eq!(3, super::move_mask(b'N'));
+        assert_eq!(3, super::move_mask(b'N'));
     }
 
     #[test]
     fn move_move() {
-	for i in 0..=255 {
-	    assert_eq!(super::move_mask(i), super::move_move(i));
-	}
+        for i in 0..=255 {
+            assert_eq!(super::move_mask(i), super::move_move(i));
+        }
     }
 
     #[test]
     fn test_match() {
-	assert_eq!(0, super::test_match(b'A'));
-	assert_eq!(1, super::test_match(b'C'));
-	assert_eq!(2, super::test_match(b'T'));
-	assert_eq!(3, super::test_match(b'G'));
-	assert_eq!(0, super::test_match(b'a'));
-	assert_eq!(1, super::test_match(b'c'));
-	assert_eq!(2, super::test_match(b't'));
-	assert_eq!(3, super::test_match(b'g'));
+        assert_eq!(0, super::test_match(b'A'));
+        assert_eq!(1, super::test_match(b'C'));
+        assert_eq!(2, super::test_match(b'T'));
+        assert_eq!(3, super::test_match(b'G'));
+        assert_eq!(0, super::test_match(b'a'));
+        assert_eq!(1, super::test_match(b'c'));
+        assert_eq!(2, super::test_match(b't'));
+        assert_eq!(3, super::test_match(b'g'));
 
-	assert_eq!(0, super::test_match(b'N'));
+        assert_eq!(0, super::test_match(b'N'));
     }
 
     #[test]
     fn test_if() {
-	for i in 0..=255 {
-	    assert_eq!(super::test_match(i), super::test_if(i));
-	}
+        for i in 0..=255 {
+            assert_eq!(super::test_match(i), super::test_if(i));
+        }
     }
 
     #[test]
     fn test_match_upper() {
-	for i in 0..=255 {
-	    assert_eq!(super::test_match(i), super::test_match_upper(i));
-	}
+        for i in 0..=255 {
+            assert_eq!(super::test_match(i), super::test_match_upper(i));
+        }
     }
 
     #[test]
     fn test_if_upper() {
-	for i in 0..=255 {
-	    assert_eq!(super::test_match(i), super::test_if_upper(i));
-	}
+        for i in 0..=255 {
+            assert_eq!(super::test_match(i), super::test_if_upper(i));
+        }
     }
-    
+
     #[test]
     fn lookup() {
-	for i in 0..=255 {
-	    assert_eq!(super::test_match(i), super::lookup(i));
-	}
+        for i in 0..=255 {
+            assert_eq!(super::test_match(i), super::lookup(i));
+        }
     }
 
     #[test]
     fn lookup_nocheck() {
-	for i in 0..=255 {
-	    assert_eq!(super::test_match(i), super::lookup_nocheck(i));
-	}
+        for i in 0..=255 {
+            assert_eq!(super::test_match(i), super::lookup_nocheck(i));
+        }
     }
 }

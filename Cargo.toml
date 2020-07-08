@@ -6,9 +6,17 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dependencies]
+# cano_iter
+cocktail = { git="https://github.com/natir/cocktail.git#124624f" }
+
 [dev-dependencies]
 rand      = "0.7"
 criterion = "0.3"
+
+[[bench]]
+name = "iter_cano"
+harness = false
 
 [[bench]]
 name = "nuc2bit"

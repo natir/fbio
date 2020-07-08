@@ -18,14 +18,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8aac770f1885fd7e387acedd76065302551364496e46b3dd00860b2f8359b9d"
 
 [[package]]
-name = "bifo"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "rand",
-]
-
-[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -80,6 +72,11 @@ dependencies = [
  "textwrap",
  "unicode-width",
 ]
+
+[[package]]
+name = "cocktail"
+version = "0.1.0"
+source = "git+https://github.com/natir/cocktail.git#124624f#124624f61142fc030cc0c20682c66c2a4de0aad9"
 
 [[package]]
 name = "criterion"
@@ -192,6 +189,15 @@ name = "either"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
+
+[[package]]
+name = "fbio"
+version = "0.1.0"
+dependencies = [
+ "cocktail",
+ "criterion",
+ "rand",
+]
 
 [[package]]
 name = "getrandom"

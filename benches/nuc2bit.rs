@@ -20,89 +20,93 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 
-use rand::distributions::Distribution;
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use rand::distributions::Distribution;
 
-use bifo;
+use fbio;
 
 fn nuc2bit(c: &mut Criterion) {
     let mut g = c.benchmark_group("nuc2bit");
 
     g.sample_size(2000);
     g.warm_up_time(std::time::Duration::from_secs(1));
-    
+
     let dist = rand::distributions::Uniform::from(0..8);
     let mut rng = rand::thread_rng();
     let nucleotides = [b'A', b'C', b'T', b'G', b'a', b'c', b't', b'g'];
-    
+
     for i in 0..16 {
-	let len = 1 << i;
-	
-	let seq: Vec<u8> = dist.sample_iter(&mut rng).take(len).map(|x| nucleotides[x]).collect();
+        let len = 1 << i;
 
-	g.bench_with_input(BenchmarkId::new("move_mask", len), &seq, |b, seq| {
+        let seq: Vec<u8> = dist
+            .sample_iter(&mut rng)
+            .take(len)
+            .map(|x| nucleotides[x])
+            .collect();
+
+        g.bench_with_input(BenchmarkId::new("move_mask", len), &seq, |b, seq| {
             b.iter(|| {
-		for nuc in seq.iter() {
-                    black_box(bifo::nuc2bit::move_mask(*nuc));
-		}
+                for nuc in seq.iter() {
+                    black_box(fbio::nuc2bit::move_mask(*nuc));
+                }
             })
-	});
+        });
 
-	g.bench_with_input(BenchmarkId::new("move_move", len), &seq, |b, seq| {
+        g.bench_with_input(BenchmarkId::new("move_move", len), &seq, |b, seq| {
             b.iter(|| {
-		for nuc in seq.iter() {
-                    black_box(bifo::nuc2bit::move_move(*nuc));
-		}
+                for nuc in seq.iter() {
+                    black_box(fbio::nuc2bit::move_move(*nuc));
+                }
             })
-	});
+        });
 
-	g.bench_with_input(BenchmarkId::new("test_match", len), &seq, |b, seq| {
+        g.bench_with_input(BenchmarkId::new("test_match", len), &seq, |b, seq| {
             b.iter(|| {
-		for nuc in seq.iter() {
-                    black_box(bifo::nuc2bit::test_match(*nuc));
-		}
+                for nuc in seq.iter() {
+                    black_box(fbio::nuc2bit::test_match(*nuc));
+                }
             })
-	});
+        });
 
-	g.bench_with_input(BenchmarkId::new("test_if", len), &seq, |b, seq| {
-	    b.iter(|| {
-		for nuc in seq.iter() {
-                    black_box(bifo::nuc2bit::test_if(*nuc));
-		}
-            })
-	});
-
-	g.bench_with_input(BenchmarkId::new("test_match_upper", len), &seq, |b, seq| {
+        g.bench_with_input(BenchmarkId::new("test_if", len), &seq, |b, seq| {
             b.iter(|| {
-		for nuc in seq.iter() {
-                    black_box(bifo::nuc2bit::test_match_upper(*nuc));
-		}
+                for nuc in seq.iter() {
+                    black_box(fbio::nuc2bit::test_if(*nuc));
+                }
             })
-	});
+        });
 
-	g.bench_with_input(BenchmarkId::new("test_if_upper", len), &seq, |b, seq| {
-	    b.iter(|| {
-		for nuc in seq.iter() {
-                    black_box(bifo::nuc2bit::test_if_upper(*nuc));
-		}
+        g.bench_with_input(BenchmarkId::new("test_match_upper", len), &seq, |b, seq| {
+            b.iter(|| {
+                for nuc in seq.iter() {
+                    black_box(fbio::nuc2bit::test_match_upper(*nuc));
+                }
             })
-	});
-	
-	g.bench_with_input(BenchmarkId::new("lookup", len), &seq, |b, seq| {
-	    b.iter(|| {
-		for nuc in seq.iter() {
-                    black_box(bifo::nuc2bit::lookup(*nuc));
-		}
-            })
-	});
+        });
 
-	g.bench_with_input(BenchmarkId::new("lookup_nocheck", len), &seq, |b, seq| {
-	    b.iter(|| {
-		for nuc in seq.iter() {
-                    black_box(bifo::nuc2bit::lookup(*nuc));
-		}
+        g.bench_with_input(BenchmarkId::new("test_if_upper", len), &seq, |b, seq| {
+            b.iter(|| {
+                for nuc in seq.iter() {
+                    black_box(fbio::nuc2bit::test_if_upper(*nuc));
+                }
             })
-	});
+        });
+
+        g.bench_with_input(BenchmarkId::new("lookup", len), &seq, |b, seq| {
+            b.iter(|| {
+                for nuc in seq.iter() {
+                    black_box(fbio::nuc2bit::lookup(*nuc));
+                }
+            })
+        });
+
+        g.bench_with_input(BenchmarkId::new("lookup_nocheck", len), &seq, |b, seq| {
+            b.iter(|| {
+                for nuc in seq.iter() {
+                    black_box(fbio::nuc2bit::lookup(*nuc));
+                }
+            })
+        });
     }
 }
 
