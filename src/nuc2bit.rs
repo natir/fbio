@@ -103,6 +103,79 @@ pub fn lookup_nocheck(nuc: u8) -> u8 {
     unsafe { *LOOKUP.get_unchecked(nuc as usize) }
 }
 
+pub struct GroupVec<'a> {
+    seq: &'a [u8],
+    cache: [u8; 16],
+    index_seq: usize,
+    index_cache: usize,
+}
+
+impl<'a> GroupVec<'a> {
+    pub fn new(seq: &'a [u8]) -> Self {
+        if seq.len() >= 16 {
+            let mut me = Self {
+                seq,
+                cache: [0; 16],
+                index_seq: 0,
+                index_cache: 0,
+            };
+
+            me.generate_cache();
+
+            me.index_seq = 16;
+
+            me
+        } else {
+            Self {
+                seq,
+                cache: [0; 16],
+                index_seq: 0,
+                index_cache: 17,
+            }
+        }
+    }
+
+    fn generate_cache(&mut self) {
+        unsafe {
+            let mut concat = std::mem::transmute::<[u8; 16], core::arch::x86_64::__m128i>(
+                *(self.seq[self.index_seq..].as_ptr() as *const [u8; 16]),
+            );
+
+            concat = core::arch::x86_64::_mm_srli_epi16(concat, 1); // remove first bit of u16
+            concat =
+                core::arch::x86_64::_mm_and_si128(concat, core::arch::x86_64::_mm_set1_epi8(3)); // bit and
+
+            self.cache = std::mem::transmute::<core::arch::x86_64::__m128i, [u8; 16]>(concat);
+        }
+    }
+}
+
+impl<'a> Iterator for GroupVec<'a> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index_cache < 16 {
+            self.index_cache += 1;
+
+            Some(self.cache[self.index_cache - 1])
+        } else {
+            if self.index_seq + 16 <= self.seq.len() {
+                self.generate_cache();
+                self.index_seq += 16;
+                self.index_cache = 1;
+
+                Some(self.cache[0])
+            } else if self.index_seq < self.seq.len() {
+                self.index_seq += 1;
+
+                Some(move_mask(self.seq[self.index_seq - 1]))
+            } else {
+                None
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -174,5 +247,47 @@ mod tests {
         for i in 0..=255 {
             assert_eq!(super::test_match(i), super::lookup_nocheck(i));
         }
+    }
+
+    #[test]
+    fn group_vector() {
+        assert_eq!(
+            super::GroupVec::new(b"ACTG").collect::<Vec<u8>>(),
+            vec![0, 1, 2, 3]
+        );
+
+        assert_eq!(
+            super::GroupVec::new(b"ACTGactg").collect::<Vec<u8>>(),
+            vec![0, 1, 2, 3, 0, 1, 2, 3]
+        );
+
+        assert_eq!(
+            super::GroupVec::new(b"ACTGactgACTGact").collect::<Vec<u8>>(),
+            vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2]
+        );
+
+        assert_eq!(
+            super::GroupVec::new(b"ACTGactgACTGactg")
+                .into_iter()
+                .collect::<Vec<u8>>(),
+            vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3]
+        );
+
+        assert_eq!(
+            super::GroupVec::new(b"ACTGactgACTGactgNN")
+                .into_iter()
+                .collect::<Vec<u8>>(),
+            vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 3, 3]
+        );
+
+        assert_eq!(
+            super::GroupVec::new(b"CAGAACCCCAATAAACCNCAGAACCCCAATAAACC")
+                .into_iter()
+                .collect::<Vec<u8>>(),
+            vec![
+                1, 0, 3, 0, 0, 1, 1, 1, 1, 0, 0, 2, 0, 0, 0, 1, 1, 3, 1, 0, 3, 0, 0, 1, 1, 1, 1, 0,
+                0, 2, 0, 0, 0, 1, 1
+            ]
+        );
     }
 }

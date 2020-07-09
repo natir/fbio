@@ -21,6 +21,7 @@ SOFTWARE.
  */
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+
 use rand::seq::SliceRandom;
 
 use fbio;
@@ -30,13 +31,13 @@ fn iter_cano(c: &mut Criterion) {
         let mut g = c.benchmark_group(format!("iter_cano k={}", k));
 
         let mut rng = rand::thread_rng();
-        let vals = [b'A', b'C', b'G', b'T'];
+        let nucs = [b'A', b'C', b'T', b'G', b'a', b'c', b't', b'g'];
 
         for i in 5..16 {
             let len = 1 << i;
 
             let seq = (0..len)
-                .map(|_| *vals.choose(&mut rng).unwrap())
+                .map(|_| *nucs.choose(&mut rng).unwrap())
                 .collect::<Vec<u8>>();
 
             g.bench_with_input(BenchmarkId::new("forward", len), &seq, |b, seq| {

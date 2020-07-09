@@ -21,28 +21,26 @@ SOFTWARE.
  */
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use rand::distributions::Distribution;
+
+use rand::seq::SliceRandom;
 
 use fbio;
 
 fn nuc2bit(c: &mut Criterion) {
     let mut g = c.benchmark_group("nuc2bit");
 
-    g.sample_size(2000);
+    g.sample_size(1000);
     g.warm_up_time(std::time::Duration::from_secs(1));
 
-    let dist = rand::distributions::Uniform::from(0..8);
     let mut rng = rand::thread_rng();
-    let nucleotides = [b'A', b'C', b'T', b'G', b'a', b'c', b't', b'g'];
+    let nucs = [b'A', b'C', b'T', b'G', b'a', b'c', b't', b'g'];
 
     for i in 0..16 {
         let len = 1 << i;
 
-        let seq: Vec<u8> = dist
-            .sample_iter(&mut rng)
-            .take(len)
-            .map(|x| nucleotides[x])
-            .collect();
+        let seq = (0..len)
+            .map(|_| *nucs.choose(&mut rng).unwrap())
+            .collect::<Vec<u8>>();
 
         g.bench_with_input(BenchmarkId::new("move_mask", len), &seq, |b, seq| {
             b.iter(|| {
@@ -104,6 +102,14 @@ fn nuc2bit(c: &mut Criterion) {
             b.iter(|| {
                 for nuc in seq.iter() {
                     black_box(fbio::nuc2bit::lookup(*nuc));
+                }
+            })
+        });
+
+        g.bench_with_input(BenchmarkId::new("group_vector", len), &seq, |b, seq| {
+            b.iter(|| {
+                for nuc in fbio::nuc2bit::GroupVec::new(seq) {
+                    black_box(nuc);
                 }
             })
         });
