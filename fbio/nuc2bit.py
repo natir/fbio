@@ -9,7 +9,7 @@ def median_error():
     fig.update_layout(template="plotly_dark")
     #fig.update_layout(xaxis_type="log")
     #fig.update_layout(yaxis_type="log")
-    
+
     fig.show()
 
     
@@ -41,6 +41,9 @@ def line_with_error_log_xy(info):
             name=method
         ))
 
+    fig.update_layout(xaxis_title="Number of base");
+    fig.update_layout(yaxis_title="Time (ns)");
+    fig.update_layout(font=dict(size=18))
     return fig
 
 

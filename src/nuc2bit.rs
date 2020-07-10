@@ -103,14 +103,14 @@ pub fn lookup_nocheck(nuc: u8) -> u8 {
     unsafe { *LOOKUP.get_unchecked(nuc as usize) }
 }
 
-pub struct GroupVec<'a> {
+pub struct GroupVec<'a, const N: usize> {
     seq: &'a [u8],
-    cache: [u8; 16],
+    cache: [u8; N],
     index_seq: usize,
     index_cache: usize,
 }
 
-impl<'a> GroupVec<'a> {
+impl<'a> GroupVec<'a, 16> {
     pub fn new(seq: &'a [u8]) -> Self {
         if seq.len() >= 16 {
             let mut me = Self {
@@ -130,15 +130,15 @@ impl<'a> GroupVec<'a> {
                 seq,
                 cache: [0; 16],
                 index_seq: 0,
-                index_cache: 17,
+                index_cache: 16,
             }
         }
     }
 
-    fn generate_cache(&mut self) {
+    pub fn generate_cache(&mut self) {
         unsafe {
             let mut concat = std::mem::transmute::<[u8; 16], core::arch::x86_64::__m128i>(
-                *(self.seq[self.index_seq..].as_ptr() as *const [u8; 16]),
+                *(&self.seq[self.index_seq..] as *const [u8] as *const [u8; 16]),
             );
 
             concat = core::arch::x86_64::_mm_srli_epi16(concat, 1); // remove first bit of u16
@@ -150,18 +150,138 @@ impl<'a> GroupVec<'a> {
     }
 }
 
-impl<'a> Iterator for GroupVec<'a> {
+impl<'a> GroupVec<'a, 32> {
+    pub fn new(seq: &'a [u8]) -> Self {
+        if seq.len() >= 32 {
+            let mut me = Self {
+                seq,
+                cache: [0; 32],
+                index_seq: 0,
+                index_cache: 0,
+            };
+
+            me.generate_cache();
+
+            me.index_seq = 32;
+
+            me
+        } else {
+            Self {
+                seq,
+                cache: [0; 32],
+                index_seq: 0,
+                index_cache: 32,
+            }
+        }
+    }
+
+    pub fn generate_cache(&mut self) {
+        unsafe {
+            let mut concat = std::mem::transmute::<[u8; 32], core::arch::x86_64::__m256i>(
+                *(&self.seq[self.index_seq..] as *const [u8] as *const [u8; 32]),
+            );
+
+            concat = core::arch::x86_64::_mm256_srli_epi16(concat, 1); // remove first bit of u16
+            concat = core::arch::x86_64::_mm256_and_si256(
+                concat,
+                core::arch::x86_64::_mm256_set1_epi8(3),
+            ); // bit and
+
+            self.cache = std::mem::transmute::<core::arch::x86_64::__m256i, [u8; 32]>(concat);
+        }
+    }
+}
+
+macro_rules! group_vec_iter_imp {
+    ($size:tt) => {
+        impl<'a> Iterator for GroupVec<'a, $size> {
+            type Item = u8;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                if self.index_cache < $size {
+                    self.index_cache += 1;
+
+                    Some(self.cache[self.index_cache - 1])
+                } else {
+                    if self.index_seq + $size <= self.seq.len() {
+                        self.generate_cache();
+
+                        self.index_seq += $size;
+                        self.index_cache = 1;
+
+                        Some(self.cache[0])
+                    } else if self.index_seq < self.seq.len() {
+                        self.index_seq += 1;
+
+                        Some(move_mask(self.seq[self.index_seq - 1]))
+                    } else {
+                        None
+                    }
+                }
+            }
+        }
+    };
+}
+
+group_vec_iter_imp!(16);
+group_vec_iter_imp!(32);
+
+pub struct GroupPhf<'a> {
+    seq: &'a [u8],
+    cache: &'a [u8; 4],
+    index_seq: usize,
+    index_cache: usize,
+}
+
+impl<'a> GroupPhf<'a> {
+    pub fn new(seq: &'a [u8]) -> Self {
+        if seq.len() >= 4 {
+            let mut me = Self {
+                seq,
+                cache: &[0; 4],
+                index_seq: 0,
+                index_cache: 0,
+            };
+
+            me.generate_cache();
+
+            me.index_seq = 4;
+
+            me
+        } else {
+            Self {
+                seq,
+                cache: &[0; 4],
+                index_seq: 0,
+                index_cache: 4,
+            }
+        }
+    }
+
+    pub fn generate_cache(&mut self) {
+        unsafe {
+            self.cache = crate::nuc2bit_phf::LOOKUP_GROUP_PHF
+                .get(&std::mem::transmute::<[u8; 4], u32>(
+                    *(&self.seq[self.index_seq..] as *const [u8] as *const [u8; 4]),
+                ))
+                .unwrap();
+        }
+    }
+}
+
+impl<'a> Iterator for GroupPhf<'a> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index_cache < 16 {
+        if self.index_cache < 4 {
             self.index_cache += 1;
 
             Some(self.cache[self.index_cache - 1])
         } else {
-            if self.index_seq + 16 <= self.seq.len() {
+            if self.index_seq + 4 <= self.seq.len() {
                 self.generate_cache();
-                self.index_seq += 16;
+
+                self.index_seq += 4;
                 self.index_cache = 1;
 
                 Some(self.cache[0])
@@ -250,44 +370,90 @@ mod tests {
     }
 
     #[test]
-    fn group_vector() {
+    fn group_vector16() {
         assert_eq!(
-            super::GroupVec::new(b"ACTG").collect::<Vec<u8>>(),
+            super::GroupVec::<16>::new(b"ACTG").collect::<Vec<u8>>(),
             vec![0, 1, 2, 3]
         );
 
         assert_eq!(
-            super::GroupVec::new(b"ACTGactg").collect::<Vec<u8>>(),
+            super::GroupVec::<16>::new(b"ACTGactg").collect::<Vec<u8>>(),
             vec![0, 1, 2, 3, 0, 1, 2, 3]
         );
 
         assert_eq!(
-            super::GroupVec::new(b"ACTGactgACTGact").collect::<Vec<u8>>(),
+            super::GroupVec::<16>::new(b"ACTGactgACTGact").collect::<Vec<u8>>(),
             vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2]
         );
 
         assert_eq!(
-            super::GroupVec::new(b"ACTGactgACTGactg")
+            super::GroupVec::<16>::new(b"ACTGactgACTGactg")
                 .into_iter()
                 .collect::<Vec<u8>>(),
             vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3]
         );
 
         assert_eq!(
-            super::GroupVec::new(b"ACTGactgACTGactgNN")
+            super::GroupVec::<16>::new(b"ACTGactgACTGactgNN")
                 .into_iter()
                 .collect::<Vec<u8>>(),
             vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 3, 3]
         );
 
         assert_eq!(
-            super::GroupVec::new(b"CAGAACCCCAATAAACCNCAGAACCCCAATAAACC")
+            super::GroupVec::<16>::new(b"CAGAACCCCAATAAACCNCAGAACCCCAATAAACC")
                 .into_iter()
                 .collect::<Vec<u8>>(),
             vec![
                 1, 0, 3, 0, 0, 1, 1, 1, 1, 0, 0, 2, 0, 0, 0, 1, 1, 3, 1, 0, 3, 0, 0, 1, 1, 1, 1, 0,
                 0, 2, 0, 0, 0, 1, 1
             ]
+        );
+    }
+
+    #[test]
+    fn group_vector32() {
+        assert_eq!(
+            super::GroupVec::<32>::new(b"ACTGactgACTGactgACTGactgACTGactg")
+                .into_iter()
+                .collect::<Vec<u8>>(),
+            vec![
+                0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3,
+                0, 1, 2, 3
+            ]
+        );
+
+        assert_eq!(
+            super::GroupVec::<32>::new(b"ACTGactgACTGactgACTGactgACTGact")
+                .into_iter()
+                .collect::<Vec<u8>>(),
+            vec![
+                0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3,
+                0, 1, 2
+            ]
+        );
+
+        assert_eq!(
+            super::GroupVec::<32>::new(b"ACTGactgACTGactgACTGactgACTGactgN")
+                .into_iter()
+                .collect::<Vec<u8>>(),
+            vec![
+                0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3,
+                0, 1, 2, 3, 3
+            ]
+        );
+    }
+
+    #[test]
+    fn group_phf() {
+        assert_eq!(
+            super::GroupPhf::new(b"ACT").collect::<Vec<u8>>(),
+            vec![0, 1, 2]
+        );
+
+        assert_eq!(
+            super::GroupPhf::new(b"ACTGA").collect::<Vec<u8>>(),
+            vec![0, 1, 2, 3, 0]
         );
     }
 }

@@ -42,77 +42,155 @@ fn nuc2bit(c: &mut Criterion) {
             .map(|_| *nucs.choose(&mut rng).unwrap())
             .collect::<Vec<u8>>();
 
+        let up = &seq.to_ascii_uppercase();
+
         g.bench_with_input(BenchmarkId::new("move_mask", len), &seq, |b, seq| {
             b.iter(|| {
+		let mut count = [0; 4];
+		
                 for nuc in seq.iter() {
-                    black_box(fbio::nuc2bit::move_mask(*nuc));
+                    count[fbio::nuc2bit::move_mask(*nuc) as usize] += 0;
                 }
+
+		black_box(count);
             })
         });
 
         g.bench_with_input(BenchmarkId::new("move_move", len), &seq, |b, seq| {
             b.iter(|| {
+		let mut count = [0; 4];
+		
                 for nuc in seq.iter() {
-                    black_box(fbio::nuc2bit::move_move(*nuc));
+                    count[fbio::nuc2bit::move_move(*nuc) as usize] += 0;
                 }
+
+		black_box(count);
             })
         });
 
         g.bench_with_input(BenchmarkId::new("test_match", len), &seq, |b, seq| {
             b.iter(|| {
+		let mut count = [0; 4];
+		
                 for nuc in seq.iter() {
-                    black_box(fbio::nuc2bit::test_match(*nuc));
+                    count[fbio::nuc2bit::test_match(*nuc) as usize] += 0;
                 }
+
+		black_box(count);
             })
         });
 
         g.bench_with_input(BenchmarkId::new("test_if", len), &seq, |b, seq| {
             b.iter(|| {
+		let mut count = [0; 4];
+		
                 for nuc in seq.iter() {
-                    black_box(fbio::nuc2bit::test_if(*nuc));
+                    count[fbio::nuc2bit::test_if(*nuc) as usize] += 0;
                 }
+
+		black_box(count);
             })
         });
 
         g.bench_with_input(BenchmarkId::new("test_match_upper", len), &seq, |b, seq| {
             b.iter(|| {
+		let mut count = [0; 4];
+		
                 for nuc in seq.iter() {
-                    black_box(fbio::nuc2bit::test_match_upper(*nuc));
+                    count[fbio::nuc2bit::test_match_upper(*nuc) as usize] += 0;
                 }
+
+		black_box(count);
             })
         });
 
         g.bench_with_input(BenchmarkId::new("test_if_upper", len), &seq, |b, seq| {
             b.iter(|| {
+		let mut count = [0; 4];
+		
                 for nuc in seq.iter() {
-                    black_box(fbio::nuc2bit::test_if_upper(*nuc));
+                    count[fbio::nuc2bit::test_if_upper(*nuc) as usize] += 0;
                 }
+
+		black_box(count);
             })
         });
 
         g.bench_with_input(BenchmarkId::new("lookup", len), &seq, |b, seq| {
             b.iter(|| {
+		let mut count = [0; 4];
+		
                 for nuc in seq.iter() {
-                    black_box(fbio::nuc2bit::lookup(*nuc));
+                    count[fbio::nuc2bit::lookup(*nuc) as usize] += 0;
                 }
+
+		black_box(count);
             })
         });
 
         g.bench_with_input(BenchmarkId::new("lookup_nocheck", len), &seq, |b, seq| {
             b.iter(|| {
+		let mut count = [0; 4];
+		
                 for nuc in seq.iter() {
-                    black_box(fbio::nuc2bit::lookup(*nuc));
+                    count[fbio::nuc2bit::lookup_nocheck(*nuc) as usize] += 0;
                 }
+
+		black_box(count);
             })
         });
 
-        g.bench_with_input(BenchmarkId::new("group_vector", len), &seq, |b, seq| {
+        g.bench_with_input(BenchmarkId::new("group_vector16", len), &seq, |b, seq| {
             b.iter(|| {
-                for nuc in fbio::nuc2bit::GroupVec::new(seq) {
-                    black_box(nuc);
+		let mut count = [0; 4];
+		
+                for nuc in fbio::nuc2bit::GroupVec::<16>::new(seq) {
+                    count[nuc as usize] += 0;
                 }
+
+		black_box(count);
             })
         });
+
+        g.bench_with_input(BenchmarkId::new("group_vector32", len), &seq, |b, seq| {
+            b.iter(|| {
+		let mut count = [0; 4];
+		
+                for nuc in fbio::nuc2bit::GroupVec::<32>::new(seq) {
+                    count[nuc as usize] += 0;
+                }
+
+		black_box(count);
+            })
+        });
+
+        g.bench_with_input(BenchmarkId::new("group_phf", len), &up, |b, up| {
+            b.iter(|| {
+		let mut count = [0; 4];
+		
+                for nuc in fbio::nuc2bit::GroupPhf::new(up) {
+                    count[nuc as usize] += 0;
+                }
+
+		black_box(count);
+            })
+        });
+
+        g.bench_with_input(
+            BenchmarkId::new("group_phf_with_upper", len),
+            &seq,
+            |b, seq| {
+                b.iter(|| {
+		    let mut count = [0; 4];
+		
+                    for nuc in fbio::nuc2bit::GroupPhf::new(&seq.to_ascii_uppercase()) {
+			count[nuc as usize] += 0;
+                    }
+
+		    black_box(count);
+                })
+            },
+        );
     }
 }
 

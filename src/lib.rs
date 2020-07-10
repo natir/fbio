@@ -20,6 +20,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 
+// for nuc2bit
+#![feature(const_generics)]
+
 pub mod iter_cano;
 
 pub mod nuc2bit;
+mod nuc2bit_phf;

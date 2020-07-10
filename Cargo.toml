@@ -10,6 +10,9 @@ edition = "2018"
 # cano_iter
 cocktail = { git="https://github.com/natir/cocktail.git#124624f" }
 
+# nuc2bit
+phf = { version = "0.8", features = ["macros"] }
+
 [dev-dependencies]
 rand      = "0.7"
 criterion = "0.3"
