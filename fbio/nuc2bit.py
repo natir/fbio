@@ -1,70 +1,72 @@
 
 from . import criterion
 
-import plotly.graph_objects as go
+import altair
+import pandas
+import numpy
+
+
+def mytheme():
+    return {'usermeta': {'embedOptions': {'theme': 'dark'}}, 'config': {'view': {'continuousWidth': 1600, 'continuousHeight': 1200}}}
+
+altair.themes.register('mydark', mytheme)
+altair.themes.enable("mydark")
 
 def median_error():
-    fig = line_with_error_log_xy(get_info("median", "merror"))
-
-    fig.update_layout(template="plotly_dark")
-    #fig.update_layout(xaxis_type="log")
-    #fig.update_layout(yaxis_type="log")
-
-    fig.show()
-
-    
-def average_error():
-    fig = line_with_error_log_xy(get_info("average", "aerror"))
-
-    fig.update_layout(template="plotly_dark")
-    #fig.update_layout(xaxis_type="log")
-    #fig.update_layout(yaxis_type="log")
-    
-    fig.show()
-
-    
-def line_with_error_log_xy(info):
-    x, ys, errors = info
-    
-    fig = go.Figure()
-
-    for method in ys.keys():        
-        fig.add_trace(go.Scatter(
-            x=x,
-            y=ys[method],
-            error_y=dict( 
-                type='data',
-                array=errors[method],
-                visible=True
-            ),
-            mode='lines',
-            name=method
-        ))
-
-    fig.update_layout(xaxis_title="Number of base");
-    fig.update_layout(yaxis_title="Time (ns)");
-    fig.update_layout(font=dict(size=18))
-    return fig
-
-
-def get_info(yname, ename):
     data = criterion.parse_with_input("target/criterion/nuc2bit")
 
-    x = [int(val[0]) for val in data[yname][next(iter(data[ename].keys()))]]
-    x.sort()
-
-    y = __value_sorted_by_first_int(data, yname)
-    error = __value_sorted_by_first_int(data, ename)
+    data.sort(key=lambda x: int(x[1]))
     
-    return (x, y, error)
+    df = pandas.DataFrame(data, columns=['method', 'len', 'time'])
 
+    df = df.astype({'method': 'str', 'len': 'int64', 'time': 'float64'});
 
-def __value_sorted_by_first_int(data, key):
-    y = dict()
+    brush = altair.selection_interval()
+
+    selection = altair.selection_multi(fields=['method'])
+    scales = altair.selection_interval(bind='scales')
+
+    color = altair.condition(
+        selection,
+        altair.Color('method:N', legend=None),
+        altair.value('lightgray')
+    )
     
-    for method in data[key].keys():
-        val = [v[1] for v in sorted(data[key][method], key=lambda x: int(x[0]))]
+    line = altair.Chart(df).mark_line(point=True, size=1).encode(
+        x=altair.X('len:Q', title='number of nucleotide'),
+        y=altair.Y('median(time):Q', title='time (ns)'),
+        color=color,
+        tooltip='method:N'
+    ).add_selection(
+        scales
+    )
 
-        y[method] = val
+    error = altair.Chart(df).mark_errorband(extent='iqr').encode(
+        x=altair.X('len:Q', title='number of nucleotide'),
+        y=altair.Y('time:Q', title='time (ns)'),
+        color=color,
+        tooltip='method:N'
+    )
 
-    return y
+    legend = altair.Chart(df).mark_point().encode(
+        y=altair.Y(
+            'method:N',
+            axis=altair.Axis(orient='right')
+        ),
+        color=color
+    ).add_selection(
+        selection
+    )
+    
+    fig = (line + error) | legend
+
+    fig.add_selection(
+        selection
+    )
+    
+    fig.properties(
+        width=1600,
+        height=1200,
+    )
+    
+    fig.save("nuc2bit.html")
