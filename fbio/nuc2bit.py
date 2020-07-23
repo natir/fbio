@@ -1,10 +1,11 @@
 
 from . import criterion
 
+import re
+
 import altair
 import pandas
 import numpy
-
 
 def mytheme():
     return {'usermeta': {'embedOptions': {'theme': 'dark'}}, 'config': {'view': {'continuousWidth': 1600, 'continuousHeight': 1200}}}
@@ -12,8 +13,8 @@ def mytheme():
 altair.themes.register('mydark', mytheme)
 altair.themes.enable("mydark")
 
-def median_error():
-    data = criterion.parse_with_input("target/criterion/nuc2bit")
+def median_error(filters, subsample_size, output):
+    data = criterion.parse_with_input("target/criterion/nuc2bit", subsample_size)
 
     data.sort(key=lambda x: int(x[1]))
     
@@ -21,6 +22,9 @@ def median_error():
 
     df = df.astype({'method': 'str', 'len': 'int64', 'time': 'float64'});
 
+    for filt in filters:
+        df = df[(df.method.apply(lambda x: not re.match(filt, x)))]
+    
     brush = altair.selection_interval()
 
     selection = altair.selection_multi(fields=['method'])
@@ -69,4 +73,8 @@ def median_error():
         height=1200,
     )
     
-    fig.save("nuc2bit.html")
+    fig.save(output)
+
+
+def main(args):
+    median_error(args.filters, args.subsample, args.output)

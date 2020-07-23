@@ -24,11 +24,7 @@ cargo bench -- nuc2bit
 
 Open `target/criterion/nuc2bit/report/index.html` to see criterion report.
 
-Or you can generate ploty graph:
+Or you can generate altair plot:
 ```
-// To compare median
-python -c "import fbio; fbio.nuc2bit.median_error()"
-
-// To compare average
-python -c "import fbio; fbio.nuc2bit.average_error()"
+python -m fbio nuc2bit -o nuc2bit.[html|png|svg|json] -s (subsample, default 50) -f {regex to filter out some dataset}...
 ```

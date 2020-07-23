@@ -1,24 +1,27 @@
 
 import os
 import csv
+import random
 import pathlib
 
 from collections import defaultdict
 
 import pandas
 
-def parse_with_input(path):
+def parse_with_input(path, subsample_size):
 
     data = list()
     
     for (path, method, params) in __estimates_path(path):
         with open(path) as fh:
             reader = csv.DictReader(fh)
-        
+
+            local_data = list()
             for (i, raw) in enumerate(reader):
-                if i > 50:
-                    break
-                data.append((method, params, float(raw["sample_measured_value"])/float(raw["iteration_count"])))
+                local_data.append(float(raw["sample_measured_value"])/float(raw["iteration_count"]))
+
+            for val in random.choices(local_data, k=subsample_size):
+                data.append((method, params, val))
 
     return data
 
