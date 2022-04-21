@@ -21,8 +21,6 @@ SOFTWARE.
  */
 
 // for nuc2bit
-#![feature(const_generics)]
-
 pub mod iter_cano;
 
 pub mod nuc2bit;

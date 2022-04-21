@@ -8,10 +8,13 @@ edition = "2018"
 
 [dependencies]
 # cano_iter
-cocktail = { git="https://github.com/natir/cocktail.git#124624f" }
+cocktail = { git="https://github.com/natir/cocktail.git" }
 
 # nuc2bit
 phf = { version = "0.8", features = ["macros"] }
+
+# encoding impact
+kmers = { git="https://github.com/COMBINE-lab/kmers.git" }
 
 [dev-dependencies]
 rand      = "0.7"
@@ -23,4 +26,8 @@ harness = false
 
 [[bench]]
 name = "nuc2bit"
+harness = false
+
+[[bench]]
+name = "fast_encoding"
 harness = false
